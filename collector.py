@@ -146,18 +146,21 @@ def paginate_fetch(
     earliest_ms: int,
     build_params: Callable[[dict[str, Any]], None],
     extract_timestamp: Callable[[Any], int],
+    symbol_param: str = "symbol",
 ) -> list[Any]:
     """공통 페이지네이션 유틸리티 (과거→최신 순 정렬).
 
     Binance 응답은 기본적으로 과거→최신 순으로 정렬되어 있으며, endTime을 줄 경우
     해당 시점 이전의 데이터를 반환한다. earliest_ms 이전의 데이터는 제외한다.
+    일부 엔드포인트는 심볼 파라미터 키가 `symbol` 대신 `pair` 등을 요구하므로,
+    ``symbol_param`` 인수를 통해 키 이름을 지정할 수 있다.
     """
 
     end_time: int | None = None
     all_rows: list[Any] = []
 
     while True:
-        params: dict[str, Any] = {"symbol": symbol, "limit": limit}
+        params: dict[str, Any] = {symbol_param: symbol, "limit": limit}
         if end_time is not None:
             params["endTime"] = end_time
         build_params(params)
@@ -216,7 +219,14 @@ def fetch_klines(symbol: str, interval: str, days: int) -> pd.DataFrame:
     return frame
 
 
-def fetch_index_like(symbol: str, endpoint: str, interval: str, days: int) -> pd.DataFrame:
+def fetch_index_like(
+    symbol: str,
+    endpoint: str,
+    interval: str,
+    days: int,
+    *,
+    symbol_param: str = "symbol",
+) -> pd.DataFrame:
     earliest_ms = to_ms(now_kst() - pd.Timedelta(days=days))
     rows = paginate_fetch(
         path=endpoint,
@@ -225,6 +235,7 @@ def fetch_index_like(symbol: str, endpoint: str, interval: str, days: int) -> pd
         earliest_ms=earliest_ms,
         build_params=lambda p: p.update({"interval": interval}),
         extract_timestamp=lambda row: int(row[0]),
+        symbol_param=symbol_param,
     )
     columns = [
         "open_time",
@@ -349,7 +360,11 @@ def collect_symbol(symbol: str, out_dir: Path, stats: FetchStats) -> None:
         (
             f"{symbol}_index_{INTERVAL}_{DAYS}d.csv",
             lambda: fetch_index_like(
-                symbol, "/fapi/v1/indexPriceKlines", INTERVAL, DAYS
+                symbol,
+                "/fapi/v1/indexPriceKlines",
+                INTERVAL,
+                DAYS,
+                symbol_param="pair",
             ),
         ),
         (

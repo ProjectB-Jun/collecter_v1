@@ -36,6 +36,8 @@ RATIO_PERIOD = "1h"                            # Long/Short, Taker Vol 주기
 - `{symbol}_mark_{INTERVAL}_{DAYS}d.csv`
 - `{symbol}_premium_{INTERVAL}_{DAYS}d.csv`
 
+> 지수 가격(Index Price) 엔드포인트(`/fapi/v1/indexPriceKlines`)는 Binance 사양상 `pair` 파라미터를 요구하므로, 스크립트가 자동으로 해당 키를 사용해 HTTP 400 오류를 방지합니다.
+
 ## 실행 방법
 ### 로컬 실행
 1. Python 3.11 이상과 가상환경을 준비합니다.
